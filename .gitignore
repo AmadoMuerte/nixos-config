@@ -1,0 +1,16 @@
+result
+result-*
+
+# Never commit local credentials or private key material.
+.env
+.env.*
+secrets/
+credentials/
+*.key
+*.pem
+*.p12
+*.pfx
+*.kdbx
+*.age
+id_rsa
+id_ed25519
