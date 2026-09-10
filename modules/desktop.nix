@@ -27,8 +27,10 @@
   # LXQt PolicyKit agent — lets GUI apps ask for elevated privileges.
   systemd.user.services.lxpolkit = {
     description = "LXQt PolicyKit Agent";
-    wantedBy = [ "graphical-session.target" ];
-    partOf = [ "graphical-session.target" ];
+    # GDM starts Hyprland directly on this machine, so graphical-session.target
+    # is never activated. default.target is active for every user login and has
+    # the Wayland display environment imported by GDM.
+    wantedBy = [ "default.target" ];
     serviceConfig = {
       ExecStart = "${pkgs.lxqt.lxqt-policykit}/bin/lxqt-policykit-agent";
       Restart = "on-failure";
