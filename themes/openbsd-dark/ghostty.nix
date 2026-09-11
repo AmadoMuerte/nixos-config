@@ -6,7 +6,7 @@
     font-family = Terminus
     font-family = DejaVu Sans Mono
     font-family = monospace
-    font-size = 12.5
+    font-size = 16
     background-opacity = 1
     background-blur = false
     cursor-style = block
