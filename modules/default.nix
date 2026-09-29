@@ -17,5 +17,7 @@
     ./theming.nix
     ./shell.nix
     ./drivers.nix
+    ./bitwig.nix
+    ./spotify.nix
   ];
 }

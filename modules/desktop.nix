@@ -5,9 +5,13 @@
 {
   # GNOME display manager (session picker / greeter).
   services.displayManager.gdm.enable = true;
+  services.displayManager.defaultSession = "hyprland-uwsm";
 
   # Hyprland compositor.
-  programs.hyprland.enable = true;
+  programs.hyprland = {
+    enable = true;
+    withUWSM = true;
+  };
 
   # Throne VPN (tun mode).
   programs.throne = {

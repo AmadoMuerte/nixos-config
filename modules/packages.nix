@@ -7,9 +7,10 @@
   # ── System packages ────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     # ── Applications ────────────────────────────────────────────
+    onlyoffice-desktopeditors
+    obs-studio
     kdePackages.ark
     prismlauncher
-    spotify
     overskride                 # Bluetooth manager (GUI)
     fastfetch                  # System info on terminal start
     opencode                   # AI coding assistant
@@ -79,33 +80,7 @@
     glib                       # gsettings CLI
     dconf
     gsettings-desktop-schemas
-
-    # ── Music production ────────────────────────────────────────
-    lmms
-    carla
-
-    # Synths
-    surge-XT
-    dexed
-    odin2
-    cardinal
   ];
-
-  # Make audio plugins visible to DAWs
-  environment.pathsToLink = [
-    "/lib/lv2"
-    "/lib/vst"
-    "/lib/vst3"
-    "/lib/clap"
-  ];
-   
-  environment.sessionVariables = {
-    LV2_PATH = "/run/current-system/sw/lib/lv2";
-    VST_PATH = "/run/current-system/sw/lib/vst";
-    VST3_PATH = "/run/current-system/sw/lib/vst3";
-    CLAP_PATH = "/run/current-system/sw/lib/clap";
-  };
-  
 
   # ── nix-ld ────────────────────────────────────────────────────
   #
