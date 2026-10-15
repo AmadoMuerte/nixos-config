@@ -1,11 +1,12 @@
 # Desktop stack: display manager, compositor, bluetooth and polkit agent.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 
 {
   # GNOME display manager (session picker / greeter).
   services.displayManager.gdm.enable = true;
   services.displayManager.defaultSession = "hyprland-uwsm";
+  services.flatpak.enable = true;
 
   # Hyprland compositor.
   programs.hyprland = {
@@ -16,6 +17,7 @@
   # Throne VPN (tun mode).
   programs.throne = {
     enable = true;
+    package = inputs.throne-nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.throne;
     tunMode.enable = true;
   };
 

@@ -19,5 +19,6 @@
     ./drivers.nix
     ./bitwig.nix
     ./spotify.nix
+    ./flatpak.nix
   ];
 }

@@ -41,6 +41,7 @@
       "inputs": {
         "nixpkgs": "nixpkgs",
         "spicetify-nix": "spicetify-nix",
+        "throne-nixpkgs": "throne-nixpkgs",
         "zen-browser": "zen-browser"
       }
     },
@@ -77,6 +78,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "throne-nixpkgs": {
+      "locked": {
+        "lastModified": 1786236773,
+        "narHash": "sha256-1cYpunLVYJBBD94XmfLOXzFvJ319F3VoYFqHGfXV9kI=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "62fae0242370ae97c3721003a32366a0cba3a96e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "62fae0242370ae97c3721003a32366a0cba3a96e",
         "type": "github"
       }
     },

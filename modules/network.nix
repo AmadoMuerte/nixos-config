@@ -3,6 +3,8 @@
 { config, lib, pkgs, ... }:
 {
   networking.networkmanager.enable = true;
+  # Cloudflare/Google DNS reaches Sky/TGC game endpoints through Throne.
+  networking.networkmanager.insertNameservers = [ "1.1.1.1" "8.8.8.8" ];
   networking.firewall.trustedInterfaces = [ "throne-tun" ];
   networking.firewall.checkReversePath = "loose";
   networking.localCommands = ''

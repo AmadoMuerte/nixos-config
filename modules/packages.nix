@@ -14,7 +14,6 @@
     overskride                 # Bluetooth manager (GUI)
     fastfetch                  # System info on terminal start
     opencode                   # AI coding assistant
-    throne                     # VPN client
     steam
     telegram-desktop
     nwg-displays               # Multi-monitor configurator
