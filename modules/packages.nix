@@ -7,6 +7,7 @@
   # ── System packages ────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     # ── Applications ────────────────────────────────────────────
+    proton-pass                # Password manager (GUI)
     onlyoffice-desktopeditors
     obs-studio
     kdePackages.ark

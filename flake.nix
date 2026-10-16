@@ -13,6 +13,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    home-manager = {
+      url = "github:nix-community/home-manager/cda90fd8838825c689fde9d3f3b4e937937790df";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -22,6 +27,7 @@
   outputs = {
     self,
     nixpkgs,
+    home-manager,
     spicetify-nix,
     zen-browser,
     ...
@@ -35,6 +41,7 @@
 
       modules = [
         ./configuration.nix
+        home-manager.nixosModules.default
         spicetify-nix.nixosModules.spicetify
       ];
     };

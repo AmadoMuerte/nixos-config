@@ -3,6 +3,12 @@
 let
   hex = color: builtins.replaceStrings [ "#" ] [ "" ] color;
   rgba = color: "rgba(${hex color}FF)";
+  # Restore the picked wallpaper on session start, else fall back to solid colour.
+  # -s (not -f) so an empty cache file falls through to `awww clear`.
+  wallpaperCommand =
+    "f=\\\"$HOME/.cache/wallpaper-current\\\"; "
+    + "if [ -s \\\"$f\\\" ]; then awww img --all \\\"$(cat \\\"$f\\\")\\\"; "
+    + "else awww clear ${hex colors.background}; fi";
 in
 {
   "hypr/config/theme.lua" = ''
@@ -18,7 +24,7 @@ in
         groupLocked = "${rgba colors.warning}",
     }
 
-    theme = { wallpaper_command = "awww clear ${hex colors.background}" }
+    theme = { wallpaper_command = "${wallpaperCommand}" }
 
     hl.config({
         general = {

@@ -22,7 +22,17 @@
   imports = [
     ./hardware-configuration.nix
     ./modules/default.nix
+    ./themes
   ];
+
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
+    users.amado = import ./home.nix;
+  };
+
+  # Single source of truth for the complete desktop appearance.
+  desktop.theme = "breakcore";
 
   # This option defines the first version of NixOS installed on this machine.
   # Used to keep compatibility with app data from older installations.
