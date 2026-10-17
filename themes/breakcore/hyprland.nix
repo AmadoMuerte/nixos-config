@@ -29,11 +29,14 @@ in
 
     hl.config({
         general = {
-            gaps_in = 2,
-            gaps_out = 4,
-            border_size = 2,
+            gaps_in = 10,
+            gaps_out = 14,
+            border_size = 1,
             col = {
-                active_border = "${rgbaA colors.accent "b3"}",
+                -- 0.18 alpha (Axenide port): the edge is read from rounding and
+                -- shadow, not from a line. Group borders below stay at 0.70 —
+                -- a group bar is chrome, not an edge.
+                active_border = "${rgbaA colors.accent "2e"}",
                 inactive_border = colors.inactiveBord,
             },
         },
@@ -54,11 +57,10 @@ in
         decoration = {
             rounding = 14,
             rounding_power = 3,
-            active_opacity = 0.92,
-            inactive_opacity = 0.78,
+            active_opacity = 1.0,
+            inactive_opacity = 0.94,
             fullscreen_opacity = 1.0,
-            dim_inactive = true,
-            dim_strength = 0.12,
+            dim_inactive = false,
             blur = {
                 enabled = true,
                 size = 10,
@@ -68,45 +70,50 @@ in
             },
             shadow = {
                 enabled = true,
-                range = 16,
-                render_power = 3,
-                color = 0x66${hex colors.accent},
+                range = 14,
+                render_power = 4,
+                color = 0x66${hex colors.background},
             },
         },
         animations = { enabled = true },
     })
 
+    -- Zen must never be translucent, and this must survive a reinstall, so the
+    -- rule lives in the theme instead of the unmanaged ~/.config/hypr/config/
+    -- windowrules.lua. Zen's real window class is "zen-twilight", NOT "zen".
+    hl.window_rule({ name = "theme-browser-opacity", match = { class = "^(zen|zen-.*|firefox)$" }, opacity = "1.0 override" })
+
     hl.curve("breakcoreOvershoot", { type = "bezier", points = { {0.1, 0.9},  {0.2, 1.06} } })
     hl.curve("breakcoreSnap",      { type = "bezier", points = { {0.2, 0},    {0, 1}      } })
     hl.curve("breakcoreGlide",     { type = "bezier", points = { {0.05, 0.9}, {0.1, 1}    } })
 
-    hl.animation({ leaf = "global",             enabled = true, speed = 16, bezier = "breakcoreGlide" })
-    hl.animation({ leaf = "windows",            enabled = true, speed = 10, bezier = "breakcoreGlide",     style = "popin 95%" })
-    hl.animation({ leaf = "windowsIn",          enabled = true, speed = 11, bezier = "breakcoreOvershoot", style = "popin 92%" })
-    hl.animation({ leaf = "windowsOut",         enabled = true, speed = 6,  bezier = "breakcoreSnap",      style = "popin 96%" })
-    hl.animation({ leaf = "windowsMove",        enabled = true, speed = 10, bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "layers",             enabled = true, speed = 10, bezier = "breakcoreGlide",     style = "slide" })
-    hl.animation({ leaf = "layersIn",           enabled = true, speed = 10, bezier = "breakcoreSnap",      style = "slide" })
-    hl.animation({ leaf = "layersOut",          enabled = true, speed = 8,  bezier = "breakcoreSnap",      style = "slide" })
-    hl.animation({ leaf = "border",             enabled = true, speed = 14, bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fade",               enabled = true, speed = 9,  bezier = "breakcoreGlide" })
-    hl.animation({ leaf = "fadeIn",             enabled = true, speed = 10, bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadeOut",            enabled = true, speed = 8,  bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "workspaces",         enabled = true, speed = 10, bezier = "breakcoreGlide",     style = "slidefade 12%" })
-    hl.animation({ leaf = "workspacesIn",       enabled = true, speed = 10, bezier = "breakcoreSnap",      style = "slidefade 12%" })
-    hl.animation({ leaf = "workspacesOut",      enabled = true, speed = 10, bezier = "breakcoreSnap",      style = "slidefade 12%" })
-    hl.animation({ leaf = "specialWorkspace",    enabled = true, speed = 10, bezier = "breakcoreGlide", style = "slidefade 10%" })
-    hl.animation({ leaf = "specialWorkspaceIn",  enabled = true, speed = 10, bezier = "breakcoreSnap",  style = "slidefade 10%" })
-    hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 10, bezier = "breakcoreSnap",  style = "slidefade 10%" })
-    hl.animation({ leaf = "zoomFactor",         enabled = true, speed = 14, bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadePopups",         enabled = true, speed = 10, bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadePopupsIn",       enabled = true, speed = 10, bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadePopupsOut",      enabled = true, speed = 10, bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadeLayersIn",       enabled = true, speed = 9,  bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadeLayersOut",      enabled = true, speed = 9,  bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadeDim",            enabled = true, speed = 9,  bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadeSwitch",         enabled = true, speed = 9,  bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "fadeShadow",         enabled = true, speed = 9,  bezier = "breakcoreSnap" })
-    hl.animation({ leaf = "monitorAdded",       enabled = true, speed = 9,  bezier = "breakcoreGlide" })
+    hl.animation({ leaf = "global",             enabled = true, speed = 4, bezier = "breakcoreGlide" })
+    hl.animation({ leaf = "windows",            enabled = true, speed = 3, bezier = "breakcoreGlide",     style = "popin 98%" })
+    hl.animation({ leaf = "windowsIn",          enabled = true, speed = 3, bezier = "breakcoreOvershoot", style = "popin 98%" })
+    hl.animation({ leaf = "windowsOut",         enabled = true, speed = 2,  bezier = "breakcoreSnap",      style = "popin 98%" })
+    hl.animation({ leaf = "windowsMove",        enabled = true, speed = 3, bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "layers",             enabled = true, speed = 3, bezier = "breakcoreGlide",     style = "slide" })
+    hl.animation({ leaf = "layersIn",           enabled = true, speed = 3, bezier = "breakcoreSnap",      style = "slide" })
+    hl.animation({ leaf = "layersOut",          enabled = true, speed = 2,  bezier = "breakcoreSnap",      style = "slide" })
+    hl.animation({ leaf = "border",             enabled = true, speed = 3, bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fade",               enabled = true, speed = 2,  bezier = "breakcoreGlide" })
+    hl.animation({ leaf = "fadeIn",             enabled = true, speed = 3, bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadeOut",            enabled = true, speed = 2,  bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "workspaces",         enabled = true, speed = 3, bezier = "breakcoreGlide",     style = "slidefade 12%" })
+    hl.animation({ leaf = "workspacesIn",       enabled = true, speed = 3, bezier = "breakcoreSnap",      style = "slidefade 12%" })
+    hl.animation({ leaf = "workspacesOut",      enabled = true, speed = 3, bezier = "breakcoreSnap",      style = "slidefade 12%" })
+    hl.animation({ leaf = "specialWorkspace",    enabled = true, speed = 3, bezier = "breakcoreGlide", style = "slidefade 10%" })
+    hl.animation({ leaf = "specialWorkspaceIn",  enabled = true, speed = 3, bezier = "breakcoreSnap",  style = "slidefade 10%" })
+    hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 3, bezier = "breakcoreSnap",  style = "slidefade 10%" })
+    hl.animation({ leaf = "zoomFactor",         enabled = true, speed = 3, bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadePopups",         enabled = true, speed = 3, bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadePopupsIn",       enabled = true, speed = 3, bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadePopupsOut",      enabled = true, speed = 3, bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadeLayersIn",       enabled = true, speed = 2,  bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadeLayersOut",      enabled = true, speed = 2,  bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadeDim",            enabled = true, speed = 2,  bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadeSwitch",         enabled = true, speed = 2,  bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "fadeShadow",         enabled = true, speed = 2,  bezier = "breakcoreSnap" })
+    hl.animation({ leaf = "monitorAdded",       enabled = true, speed = 2,  bezier = "breakcoreGlide" })
   '';
 }

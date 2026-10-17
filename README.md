@@ -1,72 +1,407 @@
-# NixOS configuration
+# nixos-config
 
-Personal NixOS system configuration — the single source of truth for this
-machine: boot, hardware, desktop, drivers, networking, packages, locale,
-security, shell, user modules, Home Manager, and both desktop themes.
+NixOS flake configuration for this machine. One flake output, one host:
 
-## Build
+```
+nixosConfigurations.nixos   # x86_64-linux, hostname "nixos", user "amado"
+```
 
-The flake in this repository is the entry point:
+Nothing else is exported — no `packages`, no `devShells`, no other host. The
+whole system is described here: boot, hardware, drivers, desktop, networking,
+packages, locale, shell, Home Manager, and the desktop theme.
+
+Repo root is `/home/amado/nixos-config`. A stale copy of the configuration used
+to live at `~/.config/nix`; that tree was archived to `~/.config/nix-backup` and
+is **not** an entry point. Always rebuild from `/home/amado/nixos-config`.
+
+## Build and switch
 
 ```sh
-sudo nixos-rebuild switch --flake ~/nixos-config#nixos   # apply
-sudo nixos-rebuild build  --flake ~/nixos-config#nixos   # build only
+# Apply: build, activate, add a system generation, run Home Manager.
+sudo nixos-rebuild switch --flake /home/amado/nixos-config#nixos
+
+# Evaluate + build only, no activation. Result symlinked to ./result.
+nixos-rebuild build --flake /home/amado/nixos-config#nixos
+
+# Prove the flake evaluates without building anything.
+nix flake show /home/amado/nixos-config
 ```
 
-The running configuration used to come from a duplicate tree at `~/.config/nix`.
-That tree has been archived to `~/.config/nix-backup` and is no longer an entry
-point — do not rebuild from it.
+`nixos-rebuild build` is the cheap syntax/type check: if it evaluates, the
+change is structurally sound. Run it after every edit before switching.
 
-Home Manager is a flake input (pinned revision, `inputs.nixpkgs.follows =
-"nixpkgs"` so there is exactly one nixpkgs), and its module sits in the
-`nixosConfigurations.nixos` module list. `configuration.nix` does the wiring:
-it imports `./hardware-configuration.nix`, `./modules/default.nix`, and
-`./themes`; it enables Home Manager with `useGlobalPkgs` and `useUserPackages`
-and `users.amado = import ./home.nix`; and it sets `desktop.theme`.
+### Crash recovery
 
-`hardware-configuration.nix` contains this machine's filesystem UUIDs and AMD
-hardware settings. On different hardware, keep the freshly generated
-`/etc/nixos/hardware-configuration.nix` instead of the repository copy and
-review `modules/drivers.nix` before rebuilding.
+If a switch leaves the machine without a working session, SSH in (or use a TTY)
+and inspect generations:
 
-## Desktop theme
-
-Two themes are available: `openbsd-dark` and `breakcore`. Each lives in its own
-directory under `themes/`.
-
-Switch in one line in `configuration.nix`:
-
-```nix
-desktop.theme = "breakcore";   # or "openbsd-dark"
+```sh
+sudo nix-env -p /nix/var/nix/profiles/system --list-generations
 ```
 
-The loader default stays `openbsd-dark`. Layout: `themes/default.nix` holds the
-option and the installer, and each `themes/<theme>/` holds 11 files —
-`colors.nix`, a `default.nix` aggregator, and 9 app modules: hyprland, waybar,
-ghostty, fuzzel, swaync, gtk, qt, hyprlock, fish. Home Manager installs the
-generated files into `/home/amado/.config`.
+Each line is a generation number, timestamp, and whether it is the current or
+booted one. Then either activate a specific generation directly:
 
-**Trap:** the loader discovers themes with `builtins.readDir` on the
-source-filtered store copy, so a theme directory must be tracked by git —
-an untracked `themes/breakcore/` fails the build with ``error: A definition for
-option 'desktop.theme' is not of type 'value "openbsd-dark" (singular enum)'``.
+```sh
+sudo /nix/var/nix/profiles/system-42-link/bin/switch-to-configuration switch
+```
 
-Wallpapers are restored at login from `~/.cache/wallpaper-current`, written by
-`~/.config/hypr/wallpaper.sh` (mainMod+SHIFT+W picks one).
+…or roll the profile pointer back to the previous generation:
 
-### Palette contract
+```sh
+sudo nixos-rebuild switch --rollback
+```
 
-Both palettes are exported from `themes/<name>/colors.nix` with the same
-11-token contract — `background`, `panel`, `surface`, `foreground`, `muted`,
-`border`, `borderActive`, `accent`, `accentDim`, `error`, `warning` — plus a
-parallel `rgb` attrset holding the same names in `"R,G,B"` form for Qt stylesheet
-generation. Every app module consumes only those tokens, so the two themes
-differ in values, not in structure.
+Both take effect immediately on the running system and become the boot default.
+`--rollback` only moves the pointer; the `switch-to-configuration switch` form
+lets you jump to any generation number the list printed, forward or back.
 
-- `openbsd-dark` — flat and opaque: no blur, no transparency, no animations,
-  square corners, OpenBSD's dark greys with a muted blue accent.
-- `breakcore` — dark, rounded, transparent, with blur and animations enabled;
-  near-black violet base, hot-magenta accent, cyan `borderActive`.
+## Flake structure
 
-No credentials, VPN profiles, SSH keys, application data, or unrelated user
-dotfiles are stored here.
+`flake.nix` pulls in four inputs: `nixpkgs` (nixos-unstable), `home-manager`
+(pinned revision, `inputs.nixpkgs.follows = "nixpkgs"` so exactly one nixpkgs
+exists), `spicetify-nix` (same follows), `zen-browser`, and `throne-nixpkgs`
+pinned to a fixed commit for the Throne VPN package. It builds
+`nixosConfigurations.nixos` from three modules: `./configuration.nix`,
+`home-manager.nixosModules.default`, and `spicetify-nix.nixosModules.spicetify`.
+
+`configuration.nix` is wiring only — no settings. It imports
+`./hardware-configuration.nix`, `./modules/default.nix` and `./themes`; enables
+Home Manager with `useGlobalPkgs` and `useUserPackages` and binds
+`users.amado = import ./home.nix`; and sets `desktop.theme`.
+
+`modules/default.nix` is the module aggregator — add new modules to its import
+list rather than editing `configuration.nix`. `hardware-configuration.nix` holds
+this machine's btrfs UUIDs (single btrfs filesystem, subvolumes `home` and
+`nix`), the vfat `/boot` partition, and the AMD CPU/GPU settings. It was
+generated by `nixos-generate-config`; keep the freshly generated copy on other
+hardware and re-check `modules/drivers.nix`.
+
+## Where things live
+
+| Path | What it holds |
+| --- | --- |
+| `flake.nix` | flake inputs and the single `nixosConfigurations.nixos` output |
+| `flake.lock` | pinned revisions of every input |
+| `configuration.nix` | entry point: imports, Home Manager wiring, `desktop.theme` |
+| `hardware-configuration.nix` | generated filesystem UUIDs, swap, kernel modules |
+| `home.nix` | Home Manager user block for `amado` |
+| `modules/` | one file per concern, aggregated by `modules/default.nix` |
+| `modules/desktop.nix` | GDM, Hyprland + UWSM, Throne VPN, Bluetooth, polkit agent |
+| `modules/packages.nix` | every `environment.systemPackages` entry, plus nix-ld |
+| `modules/drivers.nix` | AMD `amdgpu`, PipeWire, Steam, 32-bit graphics |
+| `modules/theming.nix` | fonts, `GTK_THEME`, `QT_QPA_PLATFORMTHEME`, dconf |
+| `themes/default.nix` | the `desktop.theme` option and the installer |
+| `themes/<name>/colors.nix` | the theme's palette tokens |
+| `themes/<name>/<app>.nix` | one Nix file per app config the theme generates |
+| `themes/breakcore/waybar.nix` | generates `~/.config/waybar/theme.css` |
+| `~/.config/waybar/config.jsonc` | live waybar layout — unmanaged, not in the repo |
+| `~/.config/waybar/scripts/` | waybar module scripts (unmanaged) |
+| `~/.config/swaync/config.json` | live swaync layout — unmanaged, not in the repo |
+| `~/.config/hypr/wallpaper.sh` | wallpaper picker, writes `~/.cache/wallpaper-current` |
+
+## The theme system
+
+`desktop.theme` is defined in `themes/default.nix`. Its type is an enum built
+from the directory names under `themes/`, its default is `"openbsd-dark"`, and
+its description is `Complete desktop theme to install.` The sibling option
+`desktop.themeUser` (type `str`, default `"amado"`) names the user whose desktop
+receives the theme. Verified on this host:
+
+```
+$ nix eval --json .#nixosConfigurations.nixos.options.desktop.theme.type.description
+"one of \"breakcore\", \"openbsd-dark\""
+
+$ nix eval --raw .#nixosConfigurations.nixos.config.desktop.theme
+breakcore
+```
+
+So exactly two themes exist: **`breakcore`** and **`openbsd-dark`**. The
+loading default is `openbsd-dark`; `configuration.nix` currently overrides it
+with `desktop.theme = "breakcore";`.
+
+`themes/default.nix` maps the selected theme's `files` attrset onto Home Manager
+`home.file` entries as `.config/<relative-path>`, with `force = true`. Because
+those entries are symlinks into the Nix store, **changing `desktop.theme` swaps
+the entire desktop look** — every generated config below is replaced in one
+rebuild, and nothing hand-written is merged in.
+
+### breakcore
+
+Palette: `themes/breakcore/colors.nix`. Aggregator: `themes/breakcore/default.nix`,
+which imports nine consumer modules and merges their attrsets.
+
+| Consumer file | Generates (inside `~/.config/`) |
+| --- | --- |
+| `themes/breakcore/hyprland.nix` | `hypr/config/theme.lua` |
+| `themes/breakcore/waybar.nix` | `waybar/theme.css` |
+| `themes/breakcore/ghostty.nix` | `ghostty/theme-options`, `ghostty/themes/desktop-theme` |
+| `themes/breakcore/fuzzel.nix` | `fuzzel/theme.ini` |
+| `themes/breakcore/swaync.nix` | `swaync/theme.css` |
+| `themes/breakcore/gtk.nix` | `gtk-3.0/{gtk.css,settings.ini}`, `gtk-4.0/{gtk.css,settings.ini}` |
+| `themes/breakcore/qt.nix` | `qt6ct/colors/desktop-theme.conf`, `qt6ct/qt6ct.conf`, `qt6ct/breakcore.qss` |
+| `themes/breakcore/hyprlock.nix` | `hypr/theme-hyprlock.conf` |
+| `themes/breakcore/fish.nix` | `fish/conf.d/desktop-theme.fish` |
+
+Confirmed against the built configuration:
+
+```
+$ nix eval --json .#nixosConfigurations.nixos.config.home-manager.users.amado.home.file \
+    --apply 'f: builtins.attrNames f'
+[".config/fish/conf.d/desktop-theme.fish",".config/fuzzel/theme.ini",
+ ".config/ghostty/theme-options",".config/ghostty/themes/desktop-theme",
+ ".config/gtk-3.0/gtk.css",".config/gtk-3.0/settings.ini",
+ ".config/gtk-4.0/gtk.css",".config/gtk-4.0/settings.ini",
+ ".config/hypr/config/theme.lua",".config/hypr/theme-hyprlock.conf",
+ ".config/qt6ct/breakcore.qss",".config/qt6ct/colors/desktop-theme.conf",
+ ".config/qt6ct/qt6ct.conf",".config/swaync/theme.css",".config/waybar/theme.css"]
+```
+
+The theme also supplies `packages = [ terminus_font dejavu_fonts ]` and session
+variables `GTK_THEME = "adw-gtk3-dark"`, `XCURSOR_THEME = "Adwaita"`,
+`XCURSOR_SIZE = "24"`.
+
+`themes/default.nix` additionally ships three wrappers regardless of theme:
+`~/.local/bin/ghostty-reload` (dispatches an in-terminal reload shortcut through
+`hyprctl`), `~/.local/bin/Telegram` and its desktop/dbus entries (Telegram draws
+its own theme, so `QT_QPA_PLATFORMTHEME`, `GTK_THEME` and the Qt style override
+are stripped from it).
+
+### Design intent
+
+Breakcore is a dark, rounded desktop styled after the Axenide screenshots
+(floating capsules, near-borderless windows). The palette is **his, everywhere**:
+`themes/breakcore/colors.nix` carries the Ax-Shell tokens — warm near-black
+`#1a1110` background with derived `#1f1716` panel / `#251b1a` surface steps,
+warm white `#f1dedd`, salmon `#ffb3ad` accent, red `#ff5945` error, sand
+`#e1c28c` warning — and every themed app (bar, swaync, Hyprland, gtk/qt,
+ghostty, fuzzel, fish, hyprlock) reads those tokens. The shell files
+(`waybar.nix`, `swaync.nix`) additionally embed his palette verbatim as
+literals so they stay self-contained. Ghostty's 16 ANSI slots are his
+`colors.lua` ramp verbatim — a monochrome warm-salmon terminal, see the
+comment in `themes/breakcore/ghostty.nix`. Windows are opaque at rest: Hyprland
+runs `active_opacity = 1.0` with a slight `inactive_opacity = 0.94` distinction,
+`fullscreen_opacity = 1.0` keeps a fullscreen window solid, and blur stays on
+for layer-shell surfaces (bar, swaync). These are set in
+`themes/breakcore/hyprland.nix` and land in `~/.config/hypr/config/theme.lua`.
+
+Windows float. The tiling gaps are generous — `gaps_in = 10`, `gaps_out = 14`
+— and `border_size` stays at 1, the minimum. The active border is the accent
+at 0.18 alpha (`rgba(ffb3ad2e)`), near-borderless: the window edge is read
+from the 14px rounding and a soft neutral shadow (`0x66` over the background
+token), not from a line. The inactive border is the solid `#423736`, and the
+group-bar borders keep the louder 0.70 accent alpha — a group bar is chrome,
+not a window edge.
+
+The bar is built as **floating capsules**, the Axenide signature: the waybar
+window shell itself is invisible, and each module group (`modules-left`,
+`modules-center`, `modules-right`) is its own pill — `rgba(#1a1110, 0.90)` with
+a faint `#423736` hairline and fully rounded ends. Inside, the active workspace
+is the loud element: a solid `#ffb3ad` capsule that widens via padding,
+carrying `#1a1110` text (measured 10.9:1). Inactive workspaces are quiet dim
+numbers; urgent turns the capsule solid `#ff5945` with the same dark text
+(6.0:1). Text is warm white `#f1dedd` (≈ 14:1 on the pill), secondary
+`#d8c2bf` (≈ 11:1); the clock is plain warm white, bold — his clock is not an
+accent. Bar geometry — `height = 38`, `margin-top = 12` — lives in the
+unmanaged `config.jsonc` next to the layout.
+
+### Window opacity exceptions
+
+The two global opacity values above are overridden per-window by
+`hl.window_rule` entries carrying `opacity = "1.0 override"`, so those windows
+are fully opaque regardless of what the global setting says:
+
+| Rule | Class regex | Effect |
+| --- | --- | --- |
+| `theme-browser-opacity` | `^(zen\|zen-.*\|firefox)$` | browsers always opaque |
+| `browser-opacity` | `^(firefox\|zen)$` | browsers always opaque |
+| `terminal-opacity` | `^(kitty\|ghostty\|…)$` | terminals always opaque |
+| `media-opacity` | `^(mpv\|…vlc.*)$` | video/image viewers always opaque |
+
+**Zen is deliberately never translucent.** Its real window class on this system
+is `zen-twilight`, not `zen` — the unmanaged rule's `^(firefox|`^(firefox|zen)$` regex does
+not match it, and nothing breaks only because Zen's own
+`zen.widget.linux.transparency` preference defaults to false. Turning that
+preference on would make the unmanaged rule silently fail to protect the browser.
+
+`theme-browser-opacity` therefore lives in the theme itself: it is emitted into
+`~/.config/hypr/config/theme.lua` by `themes/breakcore/hyprland.nix`, it matches
+`^(zen|zen-.*|`^(zen|zen-.*|firefox)$` so it covers `zen-twilight`, and it is `require`d from
+`~/.config/hypr/hyprland.lua` before the unmanaged rules. The theme no longer
+depends on the hand-written `~/.config/hypr/config/windowrules.lua` for this,
+so the exclusion survives a reinstall and a theme switch. Editing the theme and
+rebuilding is the way to change it; editing the unmanaged file only affects that
+one machine and can be overwritten at any time.
+
+### The bar: layout vs colours
+
+Those are two different files, owned by two different things:
+
+- **Layout** — `~/.config/waybar/config.jsonc` is a plain, unmanaged file that
+  waybar reads directly. It is *not* generated by Nix and is *not* in this repo.
+  A `nixos-rebuild` does not touch it, and therefore does not change the bar's
+  layout. Restarting waybar picks up edits.
+- **Colours** — `~/.config/waybar/theme.css` *is* generated, by
+  `themes/breakcore/waybar.nix`. A `nixos-rebuild` regenerates it, which changes
+  the bar's colours only.
+
+So: rebuild changes colour, not layout; the layout only moves if you edit the
+unmanaged `config.jsonc` yourself. Reload the CSS without a rebuild with
+`killall -SIGUSR2 waybar`.
+
+Two module details worth knowing:
+
+- `hyprland/workspaces` renders `"format": "{icon}"`, and the icon set is
+  numbered `"1"`…`"10"` plus `"gaming": "G"` — the format is the bare icon,
+  with no brackets or other decoration around it.
+- `custom/notification` runs `swaync-client --subscribe-waybar` with
+  `"return-type": "json"` and `"format": "{icon}"`. Its `format-icons` map
+  covers every state swaync can report — `notification`, `none`,
+  `dnd-notification`, `dnd-none`, `inhibited-notification`, `inhibited-none`,
+  `dnd-inhibited-notification`, `dnd-inhibited-none` — so the module always has
+  a visible glyph and never renders blank. The plain states use the bell glyph
+  `󰂚`, the `inhibited-*` states the bell-slash `󰂛`, and all four `dnd-*`
+  states the muted bell `󰖁`.
+
+The accent is a budget, not a paint: it is spent on **one thing**, the active
+workspace (urgent reuses his `error` red — a state, not a decoration).
+Everything else earns attention through weight, letter-spacing or the
+dim/bright text split, not through colour. Radius is one constant — every
+surface that wants to be round is a full capsule (`9999px`); the pill shapes
+come from padding and margins, not from tuned per-element radii.
+
+### Notifications: swaync
+
+The same layout/colour split as the bar applies to swaync:
+
+- **Layout** — `~/.config/swaync/config.json` is a plain, unmanaged file that
+  swaync reads directly; a `nixos-rebuild` does not touch it. It floats the
+  control centre below the bar: `control-center-margin-top = 48` (clears
+  waybar), `control-center-margin-right = 10`, `control-center-width = 400`.
+- **Colours** — `~/.config/swaync/theme.css` is generated by
+  `themes/breakcore/swaync.nix`. `~/.config/swaync/style.css` is one line,
+  `@import url("theme.css");` — leave it as-is. `colors.css` was a leftover
+  from the old theme and has been deleted.
+
+The generated look is the Axenide popup, in his palette: a floating `#1a1110`
+card with a 16px radius, a faint `#423736` hairline, roomy padding, the app
+icon resting on a salmon-tinted tile, bold `#f1dedd` summary over `#d8c2bf`
+body (≈ 11:1), and a round close button that turns `#ff5945` on hover. The
+control centre is the same near-black at 0.95 alpha, 16px radius, with no
+accent frame at all. There is no global `* { … }` rule — the font
+(JetBrainsMono Nerd Font) is set once on the top-level windows and inherits.
+The accent is a budget here too, spent on exactly two things: a 2px `#ff5945`
+edge on critical notifications and the salmon DND switch in its on state.
+Restart the daemon after a switch to see it: `swaync-client -rs`.
+
+### Palette tokens
+
+Every token in `themes/breakcore/colors.nix`, plus what it is used for:
+
+| Token | Hex | Purpose |
+| --- | --- | --- |
+| `background` | `#1a1110` | window/terminal background, locker blur base, fuzzel backdrop |
+| `panel` | `#1f1716` | bar background, Qt `Window` section |
+| `surface` | `#251b1a` | cards, inputs, popovers, Qt `Button` section |
+| `foreground` | `#f1dedd` | primary text everywhere |
+| `muted` | `#d8c2bf` | secondary text, disabled and inactive states |
+| `border` | `#423736` | default outlines and dividers |
+| `borderActive` | `#e7bdb9` | hover/focus outlines, active borders |
+| `accent` | `#ffb3ad` | THE accent — selection, links, active workspace, clock |
+| `accentDim` | `#d99a93` | dimmed accent for less prominent highlights |
+| `error` | `#ff5945` | critical/urgent states, destructive |
+| `warning` | `#e1c28c` | warning states, locked groups |
+
+The parallel `rgb` attrset holds the same eleven names as `"R,G,B"` decimal
+triples. It exists because qt6ct stores `QColor` values as decimal triples and
+because GTK CSS needs `rgba()` alpha. The values are Axenide's `colors.lua`
+ground truth: `background`, `foreground`, `muted` (= his `color7`), `border`
+(= `surface_bright`), `accent` (= `primary`), `error`, `warning` (= `tertiary`)
+are verbatim; `panel`/`surface`/`accentDim`/`borderActive` are derived steps
+inside his warm hue ramp.
+
+`openbsd-dark` exports the same eleven tokens plus `rgb` in the same shape, so
+the consumer modules are theme-agnostic. Values differ, structure does not.
+
+## Editing this config
+
+The theme files are Nix programs that *generate* app configs at build time — they
+are not the configs themselves. Editing `themes/breakcore/waybar.nix` changes
+`~/.config/waybar/theme.css` only after a rebuild; there is no live reload of the
+Nix side.
+
+The waybar **layout** is not generated. `~/.config/waybar/config.jsonc` is a
+plain unmanaged file, listed in the repo as the live bar layout; the theme only
+supplies `theme.css`, which that file does not `@import`. To restyle the bar
+without a rebuild, run `killall -SIGUSR2 waybar` to reload its CSS.
+
+The same split applies to Hyprland. `~/.config/hypr/hyprland.lua` and
+`~/.config/hypr/config/windowrules.lua` are unmanaged, hand-written files; the
+theme only generates `~/.config/hypr/config/theme.lua`. Where the two disagree
+about a window, both are loaded, so a rule in the theme and a rule in
+`windowrules.lua` can both match the same window.
+
+Two traps worth knowing before you edit:
+
+- The theme loader discovers themes with `builtins.readDir` over the flake
+  source. A theme directory that git does not track will not be visible to the
+  build, and `desktop.theme` will fail to evaluate. Track the directory.
+- `configuration.nix` sets `system.stateVersion = "26.05"` with a comment saying
+  not to change it. It is not a version string to bump; it records the release
+  this machine's app data was first created under.
+
+After any edit, check it evaluates:
+
+```sh
+nixos-rebuild build --flake /home/amado/nixos-config#nixos
+```
+
+## What this host runs
+
+- **Boot:** systemd-boot on UEFI, `canTouchEfiVariables`.
+- **Compositor:** Hyprland with UWSM (`programs.hyprland.withUWSM = true`).
+  GDM is the display manager and defaults to the `hyprland-uwsm` session.
+  Hyprland reads `/home/amado/.config/hypr/hyprland.lua`, which
+  `require("config/theme")` first — that is the generated file, so the palette
+  is live in the compositor.
+- **Desktop:** waybar (status bar), fuzzel (launcher), swaync (notifications),
+  hyprlock (locker, launched with `--config /home/amado/.config/hypr/theme-hyprlock.conf`),
+  awww (wallpaper daemon), cliphist, grim/slurp/swappy (screenshots), nwg-displays.
+- **Imported generated config:** `monitors.lua` is written by nwg-displays and
+  is not managed here.
+- **Audio:** PipeWire with ALSA and Pulse, `rnnoise-plugin` on `LADSPA_PATH`,
+  EasyEffects and qpwgraph for routing.
+- **Networking:** NetworkManager with `insertNameservers = [ "1.1.1.1" "8.8.8.8" ]`.
+  The firewall trusts `throne-tun` and `docker0`, uses `checkReversePath = "loose"`,
+  and `networking.localCommands` adds `ip rule` entries (pref 100/101) keeping
+  `172.16.0.0/12` on the main routing table so Throne does not capture the
+  game traffic it is supposed to carry. Those rules are deleted and re-added on
+  every activation.
+- **VPN:** Throne in TUN mode, package taken from the pinned `throne-nixpkgs`
+  input rather than nixos-unstable.
+- **GPU:** AMD `amdgpu` with 32-bit graphics and DRI, `boot.kernelParams` sets
+  `amdgpu.sg_display=0`. Steam is enabled with Remote Play and dedicated server
+  firewall holes.
+- **Locale:** `Europe/Moscow`, `en_US.UTF-8` default with `ru_RU.UTF-8` overrides
+  for date, number and paper formats, `us` keyboard layout.
+- **Shell:** fish for the user (`shell = pkgs.fish`), plus zoxide, fzf, eza, bat.
+- **Containers:** Docker with the `docker0` interface trusted by the firewall;
+  the user is in `wheel`, `docker` and `networkmanager`.
+- **Security policy:** `nixpkgs.config.allowUnfree = true` globally.
+- **Unpatched binaries:** `programs.nix-ld` is enabled with a long library list,
+  currently so the official Discord client runs unmodified (needed for Krisp).
+- **Flatpak:** enabled, with `/var/lib/flatpak/exports/share` and
+  `$HOME/.local/share/flatpak/exports/share` prepended to `XDG_DATA_DIRS` so
+  Flatpak apps show up in fuzzel.
+- **Garbage collection:** weekly, `--delete-older-than 7d`, persistent — old
+  generations survive a missed run but rollback points are only about a week deep.
+- **Polkit:** `lxpolkit` is bound to `default.target`, not
+  `graphical-session.target`. GDM starts Hyprland directly on this machine so
+  the graphical session target is never activated; do not "fix" this to the
+  target that looks correct, the agent will stop launching.
+
+## Notes
+
+No credentials, VPN profiles, SSH keys, application data, or unrelated dotfiles
+belong in this repository. `.gitignore` ignores `result`, `result-*`, `.env*`,
+`secrets/`, `credentials/`, key and keystore extensions, and SSH key filenames.

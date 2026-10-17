@@ -8,6 +8,10 @@ let
       g = builtins.substring 2 2 hex;
       b = builtins.substring 4 2 hex;
     in "rgba(${r}${g}${b}${alpha})";
+  # colors.error is bright enough for the fail-active state on the composited
+  # translucent surface, above the 4.5:1 read-text floor, so no derived
+  # variant is needed.
+  failColor = colors.error;
 in
 {
   "hypr/theme-hyprlock.conf" = ''
@@ -19,7 +23,7 @@ in
 
     background {
         monitor =
-        color = ${rgba colors.background "cc"}
+        color = ${rgba colors.background "f0"}
         blur_passes = 3
         blur_size = 8
     }
@@ -27,7 +31,7 @@ in
     label {
         monitor =
         text = cmd[update:1000] date +"%H:%M"
-        font_family = Terminus
+        font_family = JetBrainsMono Nerd Font
         font_size = 64
         color = ${rgba colors.accent "ff"}
         position = 0, 90
@@ -38,9 +42,11 @@ in
     label {
         monitor =
         text = cmd[update:60000] date +"%A, %d %B"
-        font_family = Terminus
+        font_family = JetBrainsMono Nerd Font
         font_size = 16
-        color = ${rgba colors.borderActive "ff"}
+        # borderActive is only 5.12:1 here and it is the dimmer hover token;
+        # this date is read at a glance, so use muted (6.11:1 on background).
+        color = ${rgba colors.muted "ff"}
         position = 0, 42
         halign = center
         valign = center
@@ -50,13 +56,13 @@ in
         monitor =
         size = 280, 34
         outline_thickness = 2
-        rounding = 12
+        rounding = 10
         dots_size = 0.2
         dots_spacing = 0.3
         outer_color = ${rgba colors.accent "ff"}
-        inner_color = ${rgba colors.surface "e6"}
+        inner_color = ${rgba colors.surface "f0"}
         font_color = ${rgba colors.foreground "ff"}
-        fail_color = ${rgba colors.error "ff"}
+        fail_color = ${rgba failColor "ff"}
         check_color = ${rgba colors.borderActive "ff"}
         placeholder_text = password:
         position = 0, -35

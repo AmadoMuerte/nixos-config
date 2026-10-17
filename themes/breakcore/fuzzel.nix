@@ -6,7 +6,7 @@ in
 {
   "fuzzel/theme.ini" = ''
     [main]
-    font=Terminus:size=13
+    font=JetBrainsMono Nerd Font:size=13, Terminus:size=13
     prompt="run: "
     placeholder=command or application
     width=46
@@ -24,21 +24,21 @@ in
     icon-theme=Papirus-Dark
 
     [colors]
-    background=${hex colors.background}d9
+    background=${hex colors.background}f2
     text=${hex colors.foreground}ff
     prompt=${hex colors.accent}ff
     placeholder=${hex colors.muted}ff
     input=${hex colors.foreground}ff
     match=${hex colors.accent}ff
-    selection=${hex colors.accent}59
-    selection-text=${hex colors.foreground}ff
-    selection-match=${hex colors.borderActive}ff
+    selection=${hex colors.accent}ff
+    selection-text=${hex colors.background}ff
+    selection-match=${hex colors.background}ff
     counter=${hex colors.muted}ff
-    border=${hex colors.accent}ff
+    border=${hex colors.border}ff
 
     [border]
-    width=2
-    radius=18
-    selection-radius=12
+    width=1
+    radius=14
+    selection-radius=10
   '';
 }
